@@ -69,6 +69,7 @@ Resources:
         install:
           packages:
             yum:
+              httpd: []
               java-1.8.0-amazon-corretto-devel: []
     Properties:
       ImageId: ami-0440d3b780d96b29d
