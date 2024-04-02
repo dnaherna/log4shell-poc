@@ -10,7 +10,9 @@ if [ "$DEPLOYMENT_GROUP_NAME" == "VictimDeployment" ]
 then
     cd /home/ec2-user/victim
 
+    chmod 755 mvnw
     ./mvnw package
+
     nohup java -jar target/demo-0.0.1-SNAPSHOT.jar & echo $! > ./pid.file &
 
     service httpd start
