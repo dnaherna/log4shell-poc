@@ -14,14 +14,14 @@ then
 
     SERVER_IP=$(curl https://checkip.amazonaws.com)
 
-    cat > /etc/httpd/conf.d/vhost.conf <<EOF
-    <VirtualHost *:80>
-        ServerName ${SERVER_IP}
+    cat > /etc/httpd/conf.d/vhost.conf <<-EOF
+	<VirtualHost *:80>
+	    ServerName ${SERVER_IP}
 
-        ProxyPreserveHost On
-        ProxyPass / http://localhost:8080/
-        ProxyPassReverse / http://localhost:8080/
-    </VirtualHost>
+	    ProxyPreserveHost On
+	    ProxyPass / http://localhost:8080/
+	    ProxyPassReverse / http://localhost:8080/
+	</VirtualHost>
 
-    EOF
+	EOF
 fi
