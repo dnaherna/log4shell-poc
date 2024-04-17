@@ -10,5 +10,4 @@ public class Application {
         System.setProperty("com.sun.jndi.rmi.object.trustURLCodebase", "true");
         SpringApplication.run(Application.class, args);
     }
-
 }
