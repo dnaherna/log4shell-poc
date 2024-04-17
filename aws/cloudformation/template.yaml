@@ -29,6 +29,7 @@ Resources:
           packages:
             yum:
               java-1.8.0-amazon-corretto-devel: []
+              nmap-netcat: []
     Properties:
       ImageId: ami-0440d3b780d96b29d
       InstanceType: t3.micro
@@ -103,6 +104,14 @@ Resources:
     Properties:
       GroupDescription: Enable HTTP access via port 80 and SSH
       SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 9001
+          ToPort: 9001
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
