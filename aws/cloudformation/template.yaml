@@ -29,7 +29,7 @@ Resources:
           packages:
             yum:
               java-1.8.0-amazon-corretto-devel: []
-              nmap-netcat: []
+              nmap-ncat: []
     Properties:
       ImageId: ami-0440d3b780d96b29d
       InstanceType: t3.micro
