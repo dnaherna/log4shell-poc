@@ -24,6 +24,7 @@ then
 	EOF
 
     chmod -R 755 /home/ec2-user
+    chown -R ec2-user:ec2-user /home/ec2-user
 fi
 
 
@@ -65,4 +66,5 @@ then
 	EOF
 
     chmod -R 755 /home/ec2-user
+    chown -R ec2-user:ec2-user /home/ec2-user
 fi
