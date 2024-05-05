@@ -51,12 +51,12 @@ then
 
     # Scripts to start and stop spring boot application
     cat > ./start.sh <<-EOF
-	java -jar target/demo-0.0.1-SNAPSHOT.jar & echo $! > ./pid.file &
+	java -jar target/demo-0.0.1-SNAPSHOT.jar & echo \$! > ./pid.file &
 
 	EOF
 
     cat > ./stop.sh <<-EOF
-	kill $(cat ./pid.file)
+	kill \$(cat ./pid.file)
 
 	EOF
 
