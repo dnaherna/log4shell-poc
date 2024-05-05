@@ -30,6 +30,13 @@ Resources:
             yum:
               java-1.8.0-amazon-corretto-devel: []
               nmap-ncat: []
+              python3.11: []
+          commands:
+            01-create-venv:
+              command: "python3.11 -m venv /home/ec2-user/venv"
+            02-install-pip:
+              command: "source /home/ec2-user/venv/bin/activate && python -m ensurepip --upgrade && python -m pip install --upgrade pip"
+              ignoreErrors: "true"
     Properties:
       ImageId: ami-0440d3b780d96b29d
       InstanceType: t3.micro
@@ -109,8 +116,16 @@ Resources:
           ToPort: 9001
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
+          FromPort: 8888
+          ToPort: 8888
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
           FromPort: 8000
           ToPort: 8000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 1389
+          ToPort: 1389
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 80

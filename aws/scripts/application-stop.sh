@@ -10,7 +10,7 @@ if [ "$DEPLOYMENT_GROUP_NAME" == "VictimDeployment" ]
 then
     cd /home/ec2-user/victim
 
-    kill $(cat ./pid.file)
+    ./stop.sh
 
     isExistApp=`pgrep httpd`
     if [[ -n  $isExistApp ]]

