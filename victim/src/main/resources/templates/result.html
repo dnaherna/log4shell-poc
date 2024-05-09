@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Message</title>
+  </head>
+  <body>
+    <h1>Message Received</h1>
+    <p th:text="'Received: ' + ${receivedMessage}"></p>
+    <button onclick="history.back()">Go back</button>
+  </body>
+</html>

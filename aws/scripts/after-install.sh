@@ -5,10 +5,12 @@ then
     cp -R /tmp/files/attacker /home/ec2-user
     rm -rf /tmp/files
 
+    # install requirements
     source /home/ec2-user/venv/bin/activate
 
     python -m pip install -r /home/ec2-user/attacker/requirements.txt
 
+    # create helper scripts
     cd /home/ec2-user/attacker
 
     SERVER_IP=$(curl https://checkip.amazonaws.com)
@@ -23,6 +25,7 @@ then
 
 	EOF
 
+    # update permissions
     chmod -R 755 /home/ec2-user
     chown -R ec2-user:ec2-user /home/ec2-user
 fi
@@ -33,7 +36,7 @@ then
     cp -R /tmp/files/victim /home/ec2-user
     rm -rf /tmp/files
 
-    # Configure httpd to serve spring boot application
+    # configure httpd to serve spring boot application
     SERVER_IP=$(curl https://checkip.amazonaws.com)
 
     cat > /etc/httpd/conf.d/vhost.conf <<-EOF
@@ -49,7 +52,7 @@ then
 
     cd /home/ec2-user/victim
 
-    # Scripts to start and stop spring boot application
+    # create helper scripts to start and stop spring boot application
     cat > ./start.sh <<-EOF
 	java -jar target/demo-0.0.1-SNAPSHOT.jar & echo \$! > ./pid.file &
 
@@ -65,6 +68,7 @@ then
 
 	EOF
 
+    # update permissions
     chmod -R 755 /home/ec2-user
     chown -R ec2-user:ec2-user /home/ec2-user
 fi

